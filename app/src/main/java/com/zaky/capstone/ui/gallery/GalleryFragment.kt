@@ -3,6 +3,7 @@ package com.zaky.capstone.ui.gallery
 import android.app.Application
 import android.content.Context
 import android.os.Bundle
+import android.renderscript.Element
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -16,21 +17,33 @@ import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.gms.fitness.data.DataType
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.ml.custom.*
+import com.google.firebase.ml.modeldownloader.CustomModelDownloadConditions
+import com.google.firebase.ml.modeldownloader.DownloadType
+import com.google.firebase.ml.modeldownloader.FirebaseModelDownloader
+import com.google.gson.internal.bind.TypeAdapters.STRING
 import com.zaky.capstone.R
 import com.zaky.capstone.adapter.ChatAdapter
 import com.zaky.capstone.data.Chat
 import com.zaky.capstone.data.Home
 import com.zaky.capstone.databinding.FragmentGalleryBinding
 import com.zaky.capstone.helper.ViewModelFactory
+import com.zaky.capstone.ml.Model
+import org.tensorflow.lite.schema.TensorType.FLOAT32
+import org.tensorflow.lite.schema.TensorType.STRING
+import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
+import java.nio.ByteBuffer
 import java.text.SimpleDateFormat
 import java.util.*
+import javax.xml.xpath.XPathConstants.STRING
 import kotlin.collections.ArrayList
+import kotlin.random.Random.Default.nextInt
 
 class GalleryFragment : Fragment() {
 
@@ -69,6 +82,10 @@ class GalleryFragment : Fragment() {
             loadingSelesai()
         }
 
+        binding.suggestion.setOnClickListener {
+            galleryViewModel.balasChatBot()
+        }
+
 
 
         binding.send.setOnClickListener {
@@ -80,46 +97,61 @@ class GalleryFragment : Fragment() {
             if(id == null) {
                 Snackbar.make(it, "Maaf, terdapat kesalahan. Mungkin koneksi anda buruk", Snackbar.LENGTH_LONG).show()
             } else {
-                val chat = Chat(id, "you", message, currentDate)
+                val chat = Chat(id, "me", message, currentDate)
                 galleryViewModel.tambahData(chat as Chat)
+
+
+                val balas = galleryViewModel.tafsir(chat.message.toString().toLowerCase())
+                val balasan = Chat(id+1, "you", balas, currentDate)
+                galleryViewModel.tambahData(balasan as Chat)
+
                 binding.message.text = null
             }
 
 
         }
 
-//        val localModel = FirebaseCustomLocalModel.Builder()
-//            .setAssetFilePath("model.tflite")
+        val conditions = CustomModelDownloadConditions.Builder()
+            .requireWifi()
+            .build()
+        FirebaseModelDownloader.getInstance()
+            .getModel("Capstone", DownloadType.LOCAL_MODEL, conditions)
+            .addOnCompleteListener {
+                // Download complete. Depending on your app, you could enable the ML
+                // feature, or switch from the local model to the remote model, etc.
+                val model = it
+
+            }
+
+       
+
+//        val inputOutputOptions = FirebaseModelInputOutputOptions.Builder()
+//            .setInputFormat(0, FirebaseModelDataType.FLOAT32, intArrayOf(1, 224, 224, 3))
+//            .setOutputFormat(0, FirebaseModelDataType.FLOAT32, intArrayOf(1, 5))
+//            .build()
+//
+//        val input = TensorBuffer.createFixedSize(intArrayOf(1, 4), org.tensorflow.lite.DataType.STRING)
+//        input.loadBuffer(byteBuffer)
+//
+//        val inputs = FirebaseModelInputs.Builder()
+//            .add(input) // add() as many input arrays as your model requires
 //            .build()
 //
 //        val options = FirebaseModelInterpreterOptions.Builder(localModel).build()
 //        val interpreter = FirebaseModelInterpreter.getInstance(options)
-//
-//        val rumah = Home(true, true, true, true, true, true, true)
-
-//        val inputOutputOptions = FirebaseModelInputOutputOptions.Builder()
-////            .setInputFormat(0, FirebaseModelDataType.FLOAT32, intArrayOf(1, 224, 224, 3))
-//            .setInputFormat(0, FirebaseModelDataType.FLOAT32, intArrayOf(1, 224, 224, 3))
-////            .setOutputFormat(0, FirebaseModelDataType.FLOAT32, intArrayOf(1, 5))
-//            .setOutputFormat(0, FirebaseModelDataType.FLOAT32, intArrayOf(1, 5))
-//            .build()
-
-//        var inputan = arrayOf("Halo", "Hai")
-//
-//
-//        val inputs = FirebaseModelInputs.Builder()
-//            .add(inputan) // add() as many input arrays as your model requires
-//            .build()
 //        interpreter?.run(inputs, inputOutputOptions)
 //            ?.addOnSuccessListener { result ->
 //                // ...
-//                Log.d("TAG ML", "onCreateView: $result")
+//                val output = result.getOutput<Array<FloatArray>>(0)
+//                val probabilities = output[0]
+//
+//                Log.d(TAG, "onCreateView: Ini dari MLnya Dila bree $output")
 //            }
 //            ?.addOnFailureListener { e ->
 //                // Task failed with an exception
-//                Log.d("TAG ML", "onCreateView: $e")
 //                // ...
 //            }
+
 
 
 
@@ -148,4 +180,6 @@ class GalleryFragment : Fragment() {
     private fun loadingSelesai() {
         binding.progress.visibility = View.GONE
     }
-}
+ }
+
+

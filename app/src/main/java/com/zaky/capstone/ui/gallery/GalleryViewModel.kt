@@ -17,6 +17,7 @@ import com.zaky.capstone.adapter.ChatAdapter
 import com.zaky.capstone.data.Chat
 import java.util.*
 import kotlin.collections.ArrayList
+import kotlin.random.Random
 
 class GalleryViewModel(view: View) : ViewModel() {
     val db = Firebase.firestore
@@ -103,10 +104,10 @@ class GalleryViewModel(view: View) : ViewModel() {
     fun buatChatBot() {
         conversation.add(FirebaseTextMessage.createForLocalUser(
             "How are you", System.currentTimeMillis()));
-        balasChatBot("How are you")
+
     }
 
-    fun balasChatBot(text : String) {
+    fun balasChatBot() {
         val smartReply = FirebaseNaturalLanguage.getInstance().smartReply
         smartReply.suggestReplies(conversation)
             .addOnSuccessListener { result ->
@@ -119,6 +120,10 @@ class GalleryViewModel(view: View) : ViewModel() {
                     for (suggestion in result.suggestions) {
                         val replyText = suggestion.text
                         Log.d("Balasan Chat", "balasChatBot: $replyText")
+                        conversation.forEach {
+                            Log.d("TAG", "balasChatBot: ${it.timestampMillis}")
+                        }
+
                     }
                 }
             }
@@ -126,6 +131,59 @@ class GalleryViewModel(view: View) : ViewModel() {
                 // Task failed with an exception
                 // ...
             }
+    }
+
+
+    fun tafsir(pesan : String) : String {
+        var tanya = arrayOf("bagaimana", "gimana", "bgaimana", "bgmna", "gmna", "bgaimna", "bgiman", "gimna")
+        var sapa = arrayOf("hai", "hi", "halo", "hlo")
+        var salam = arrayOf("assalamualakum", "asalamu", " aslmualai")
+        var sapaWaktu = arrayOf("selamat", "slmt", "slmat", "selamt", "selmat")
+        var pagi= arrayOf("pagi", "pgi", "pag")
+        var sore = arrayOf("sore", "sor", "sre")
+        var kabar = arrayOf("kbar", "kabar", "kabr")
+
+        var jawab = "Maaf aku nggak faham, hhe"
+
+        run breaking@{
+            tanya.forEach {
+                if (pesan.contains(it)) {
+                    kabar.forEach {
+                        if (pesan.contains(it)) {
+                            jawab = jawab("kabar")
+                            return@breaking
+                        }
+                    }
+
+                }
+
+            }
+
+            sapa.forEach {
+                if(pesan.contains(it)) {
+                    jawab = jawab("sapa")
+                }
+            }
+        }
+
+        return jawab
+    }
+
+    fun jawab (text : String) : String {
+        var jawabKabar = arrayOf("Alhamdulillah aku masih setrong!!!", "Makasih udah peduli, aku baik-baik aja kok", "Aku baik-baik saja")
+        var jawabSapa = arrayOf("Halooo, ada yang bisa saya bantu?", "Haii", "Hi...")
+        var jawaban : String = "Maaf aku gak mengerti, maaf ya"
+
+
+
+        val randomValues = Random.nextInt(1, 3)
+        if (text == "kabar") {
+            jawaban = jawabKabar[randomValues]
+        } else if (text == "sapa"){
+            jawaban = jawabSapa[randomValues]
+        }
+
+        return jawaban
     }
 
 
